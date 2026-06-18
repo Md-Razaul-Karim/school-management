@@ -139,28 +139,50 @@ function setTopbarDate() {
 
 /* ═══════════════════════════════════ AUTH ═══════════════════════════════════ */
 function handleLogin() {
+async function handleLogin() {
   const btn = document.getElementById('login-btn');
   const spinner = document.getElementById('login-spinner');
   const btnText = document.getElementById('login-btn-text');
-  const role = document.getElementById('login-role').value;
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-pass').value;
+
+  if (!email || !password) {
+    showToast('Please enter email and password', 'error');
+    return;
+  }
 
   btn.disabled = true;
   spinner.classList.remove('hidden');
   btnText.textContent = 'Authenticating…';
 
-  setTimeout(() => {
-    currentRole = role;
+  try {
+    // Real Supabase login
+    const { user } = await loginUser(email, password);
+
+    // Get role from users table
+    const roleData = await getUserRole(user.id);
+    currentRole = roleData?.role || 'student';
+
+    // Update UI
     document.getElementById('login-page').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-    document.getElementById('sidebar-role-badge').innerHTML = badge(role, '#f59e0b');
-    document.getElementById('user-role-label').textContent = role;
-    document.getElementById('user-avatar').textContent = role[0];
-    navigate('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+    document.getElementById('sidebar-role-badge').innerHTML =
+      badge(currentRole, '#f59e0b');
+    document.getElementById('user-role-label').textContent = currentRole;
+    document.getElementById('user-avatar').textContent =
+      (roleData?.full_name || email)[0].toUpperCase();
+
+    navigate('dashboard',
+      document.querySelector('.nav-item[data-page="dashboard"]'));
+    showToast('✅ Welcome back, ' + (roleData?.full_name || email) + '!');
+
+  } catch (error) {
+    showToast('❌ Login failed: ' + error.message, 'error');
+  } finally {
     btn.disabled = false;
     spinner.classList.add('hidden');
     btnText.textContent = LANG[currentLang].signIn;
-    showToast('✅ Welcome back, ' + role + '!');
-  }, 900);
+  }
 }
 
 function handleLogout() {
